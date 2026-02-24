@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Pig Adventure — Level System Edition</title>
+<style>
+  body {
+    margin: 0;
+    background: #1b1b1b;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100vh;
+    font-family: sans-serif;
+    color: #f0f0f0;
+  }
+
+  #menu { text-align: center; margin-top: 40px; }
+  #menu h1 { font-size: 36px; margin-bottom: 16px; }
+  #startBtn {
+    padding: 12px 26px;
+    font-size: 20px;
+    background: #444;
+    border: 2px solid #777;
+    border-radius: 10px;
+    color: white;
+  }
+
+  #gameContainer {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+  }
+
+  /* Уровень по центру сверху */
+  #levelUI {
+    font-size: 22px;
+    font-weight: bold;
+    color: gold;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  /* HP‑бар в правом верхнем углу */
+  #hpBar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 140px;
+    height: 20px;
+    background: #4a0000;
+    border: 2px solid #aa4444;
+    z-index: 9999;
+  }
+  #hpFill {
+    width: 100%;
+    height: 100%;
+    background: #ff4444;
+  }
+
+  #game {
+    position: relative;
+    width: 800px;
+    height: 500px;
+    background: #262626;
+    border: 3px solid #555;
+    overflow: hidden;
+  }
+
+  #coinsUI {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    font-size: 18px;
+    color: #66ccff;
+    z-index: 9999;
+  }
+
+  /* Свин */
+  #pig {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: pink;
+    border-radius: 50%;
+  }
+
+  /* Скин 2 */
+  .ear {
+    position: absolute;
+    width: 16px;
+    height: 20px;
+    background: pink;
+    border: 2px solid #ffb6c1;
+    border-radius: 50% 50% 40% 40%;
+  }
+  .ear-left { left: 4px; top: -12px; transform: rotate(-15deg); }
+  .ear-right { right: 4px; top: -12px; transform: rotate(15deg); }
+
+  .eye {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    border: 2px solid #333;
+  }
+  .eye-left { left: 8px; top: 10px; }
+  .eye-right { right: 8px; top: 10px; }
+
+  .eye::after {
+    content: "";
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: black;
+    border-radius: 50%;
+    left: 3px;
+    top: 3px;
+  }
+
+  .nose {
+    position: absolute;
+    width: 18px;
+    height: 14px;
+    background: #ff9bb3;
+    border: 2px solid #ff6f8c;
+    border-radius: 50%;
+    left: 11px;
+    top: 18px;
+  }
+  .nose::before,
+  .nose::after {
+    content: "";
+    position: absolute;
+    width: 4px;
+    height: 6px;
+    background: #cc4a63;
+    border-radius: 50%;
+    top: 3px;
+  }
+  .nose::before { left: 3px; }
+  .nose::after { right: 3px; }
+
+  /* Еда */
+  .food {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: #ff9f1c;
+    border-radius: 50%;
+    border: 2px solid #ffbf3c;
+  }
+
+  /* Слаймы */
+  .slime {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    background: #4da6ff;
+    border-radius: 50%;
+  }
+
+  #boss {
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    background: #3366ff;
+    border-radius: 50%;
+    display: none;
+  }
+
+  #swordSpin {
+    position: absolute;
+    width: 110px;
+    height: 110px;
+    border: 3px solid rgba(255,255,255,0.4);
+    border-radius: 50%;
+    display: none;
+    pointer-events: none;
+  }
+
+  /* Кнопки */
+  #controls {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: 80px 80px 80px;
+    grid-template-rows: 80px 80px;
+    gap: 8px;
+  }
+  .btn {
+    background: #444;
+    border: 2px solid #777;
+    border-radius: 10px;
+    font-size: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+  }
+
+  /* Атака + ульта рядом */
+  #attackRow {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+
+  #attackBtn, #ultimateBtn {
+    padding: 10px 22px;
+    background: #886633;
+    border: 2px solid #aa8844;
+    border-radius: 10px;
+    color: white;
+    font-size: 18px;
+  }
+
+  #ultimateBtn {
+    background: #cc3300;
+    border-color: #ff6633;
+    font-weight: bold;
+  }
+
+  #ultimateBtn.cooldown {
+    background: #552211;
+    border-color: #774433;
+    opacity: 0.6;
+  }
+
+  #shopBtn, #musicBtn, #skinBtn {
+    margin-top: 8px;
+    padding: 8px 18px;
+    background: #886633;
+    border: 2px solid #aa8844;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+  }
+
+  /* Магазин */
+  #shopOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+  }
+  #shopWindow {
+    width: 260px;
+    background: #112244;
+    border: 2px solid #88aaff;
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .shopItem {
+    border: 1px solid #5577cc;
+    padding: 6px;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+
+  @keyframes fireCircle {
+    0% { transform: scale(0.2); opacity: 1; }
+    100% { transform: scale(3.5); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <h1>🐷 Pig Adventure</h1>
+  <button id="startBtn">Играть</button>
+</div>
+
+<div id="gameContainer">
+
+  <div id="levelUI">LVL 1</div>
+  <div id="hpBar"><div id="hpFill"></div></div>
+
+  <div id="game">
+    <div id="pig"></div>
+    <div id="boss"></div>
+    <div id="swordSpin"></div>
+    <div id="coinsUI">💎 0</div>
+  </div>
+
+  <div id="controls">
+    <div></div><div class="btn" id="up">↑</div><div></div>
+    <div class="btn" id="left">←</div>
+    <div class="btn" id="down">↓</div>
+    <div class="btn" id="right">→</div>
+  </div>
+
+  <div id="attackRow">
+    <button id="attackBtn">🌀 Атака</button>
+    <button id="ultimateBtn">🔥 Ульта</button>
+  </div>
+
+  <button id="shopBtn">🏪 Магазин</button>
+  <button id="musicBtn">🔊 Музыка</button>
+  <button id="skinBtn">🎨 Сменить скин</button>
+
+</div>
+
+<div id="shopOverlay">
+  <div id="shopWindow">
+    <h3>🏪 Магазин</h3>
+
+    <div class="shopItem">+1 HP — 5💎 <button onclick="buyHP()">Купить</button></div>
+    <div class="shopItem">+скорость — 4💎 <button onclick="buySpeed()">Купить</button></div>
+
+    <div class="shopItem">Меч II (урон 2) — 6💎 <button onclick="buySword(2)">Купить</button></div>
+    <div class="shopItem">Меч III (урон 3) — 10💎 <button onclick="buySword(3)">Купить</button></div>
+    <div class="shopItem">Меч IV (урон 5) — 16💎 <button onclick="buySword(5)">Купить</button></div>
+
+    <button onclick="closeShop()">Закрыть</button>
+  </div>
+</div>
+
+<script>
+/* === ПЕРЕМЕННЫЕ === */
+const menu = document.getElementById("menu");
+const startBtn = document.getElementById("startBtn");
+const gameContainer = document.getElementById("gameContainer");
+const game = document.getElementById("game");
+const pig = document.getElementById("pig");
+const boss = document.getElementById("boss");
+const swordSpin = document.getElementById("swordSpin");
+const hpFill = document.getElementById("hpFill");
+const coinsUI = document.getElementById("coinsUI");
+const levelUI = document.getElementById("levelUI");
+const shopOverlay = document.getElementById("shopOverlay");
+
+const up = document.getElementById("up");
+const down = document.getElementById("down");
+const left = document.getElementById("left");
+const right = document.getElementById("right");
+
+const attackBtn = document.getElementById("attackBtn");
+const ultimateBtn = document.getElementById("ultimateBtn");
+const shopBtn = document.getElementById("shopBtn");
+const musicBtn = document.getElementById("musicBtn");
+const skinBtn = document.getElementById("skinBtn");
+
+let pigX = 380, pigY = 230;
+let speed = 5;
+
+let maxHP = 5;
+let hp = 5;
+
+let coins = 0;
+let swordDamage = 1;
+
+let slimes = [];
+let slimeSpeed = 0.55;
+let slimeSpawnRate = 3200;
+
+let foods = [];
+let foodSpawnRate = 5500;
+
+let bossActive = false;
+let bossHP = 22;
+let bossX = 360, bossY = 40, bossDir = 1;
+
+let skin = 1;
+
+/* === Уровни === */
+let level = 1;
+let xp = 0;
+let xpNeeded = 10;
+
+function addXP(amount) {
+  xp += amount;
+  if (xp >= xpNeeded) {
+    xp -= xpNeeded;
+    level++;
+    xpNeeded = level * 10;
+
+    maxHP++;
+    hp = maxHP;
+    updateHP();
+
+    levelUI.textContent = "LVL " + level;
+  }
+}
+
+/* === Ультимейт === */
+let ultimateReady = true;
+let ultimateCooldown = 60000;
+let ultimateDamage = 9999;
+
+/* === Старт === */
+startBtn.onclick = () => {
+  menu.style.display = "none";
+  gameContainer.style.display = "flex";
+  applySkin();
+};
+
+/* === Скин === */
+function applySkin() {
+  pig.innerHTML = "";
+  if (skin === 2) {
+    pig.innerHTML = `
+      <div class="ear ear-left"></div>
+      <div class="ear ear-right"></div>
+      <div class="eye eye-left"></div>
+      <div class="eye eye-right"></div>
+      <div class="nose"></div>
+    `;
+  }
+}
+skinBtn.onclick = () => {
+  skin = skin === 1 ? 2 : 1;
+  applySkin();
+};
+
+/* === Движение === */
+function updatePig() {
+  pig.style.left = pigX + "px";
+  pig.style.top = pigY + "px";
+}
+
+function move(dx, dy) {
+  pigX = Math.max(0, Math.min(760, pigX + dx));
+  pigY = Math.max(0, Math.min(460, pigY + dy));
+  updatePig();
+}
+
+/* === Еда === */
+function spawnFood() {
+  const f = document.createElement("div");
+  f.className = "food";
+  f.style.left = Math.random()*760 + "px";
+  f.style.top = Math.random()*460 + "px";
+  game.appendChild(f);
+  foods.push({ el:f, x:parseInt(f.style.left), y:parseInt(f.style.top) });
+}
+
+function checkFood() {
+  foods = foods.filter(food => {
+    const dx = (food.x+12) - (pigX+20);
+    const dy = (food.y+12) - (pigY+20);
+    if (Math.sqrt(dx*dx+dy*dy) < 30) {
+      hp = Math.min(maxHP, hp+1);
+      updateHP();
+      coins++;
+      coinsUI.textContent = "💎 "+coins;
+      addXP(3);
+      food.el.remove();
+      return false;
+    }
+    return true;
+  });
+}
+
+/* === Слаймы (с безопасным спавном) === */
+function spawnSlime() {
+  let x, y;
+  let safe = false;
+
+  while (!safe) {
+    x = Math.random() * 760;
+    y = Math.random() * 460;
+
+    const dx = (x + 17) - (pigX + 20);
+    const dy = (y + 17) - (pigY + 20);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist > 80) safe = true; // не ближе 80px к свину
+  }
+
+  const s = document.createElement("div");
+  s.className = "slime";
+  s.style.left = x + "px";
+  s.style.top = y + "px";
+  game.appendChild(s);
+
+  slimes.push({ el: s, x: x, y: y, hp: 2 });
+}
+
+function moveSlimes() {
+  slimes.forEach(slime => {
+    const dx = pigX - slime.x;
+    const dy = pigY - slime.y;
+    const d = Math.sqrt(dx*dx + dy*dy) || 1;
+
+    slime.x += (dx/d)*slimeSpeed;
+    slime.y += (dy/d)*slimeSpeed;
+
+    slime.el.style.left = slime.x+"px";
+    slime.el.style.top = slime.y+"px";
+
+    if (d < 28) {
+      hp--;
+      updateHP();
+      if (hp <= 0) location.reload();
+    }
+  });
+}
+
+/* === Круговая атака === */
+let spinning = false;
+
+function spinAttack() {
+  if (spinning) return;
+  spinning = true;
+
+  swordSpin.style.left = (pigX - 35) + "px";
+  swordSpin.style.top = (pigY - 35) + "px";
+  swordSpin.style.display = "block";
+
+  slimes = slimes.filter(slime => {
+    const dx = (slime.x+17) - (pigX+20);
+    const dy = (slime.y+17) - (pigY+20);
+    if (Math.sqrt(dx*dx+dy*dy) < 55) {
+      slime.hp -= swordDamage;
+      if (slime.hp <= 0) {
+        coins++;
+        coinsUI.textContent = "💎 "+coins;
+        addXP(1);
+        slime.el.remove();
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (bossActive) {
+    const dx = (bossX+45)-(pigX+20);
+    const dy = (bossY+45)-(pigY+20);
+    if (Math.sqrt(dx*dx+dy*dy) < 75) {
+      bossHP -= swordDamage;
+      if (bossHP <= 0) {
+        bossActive = false;
+        boss.style.display = "none";
+        addXP(5);
+        alert("Ты победил босса!");
+      }
+    }
+  }
+
+  setTimeout(()=>{ swordSpin.style.display="none"; spinning=false; },200);
+}
+
+/* === HP === */
+function updateHP(){
+  hpFill.style.width = (hp/maxHP*100)+"%";
+}
+
+/* === Босс === */
+function spawnBoss(){
+  bossActive = true;
+  bossHP = 22;
+  boss.style.display = "block";
+  boss.style.left = bossX+"px";
+  boss.style.top = bossY+"px";
+}
+
+function moveBoss(){
+  if (!bossActive) return;
+
+  bossX += bossDir*1.15;
+  if (bossX<20 || bossX>690) bossDir*=-1;
+  boss.style.left = bossX+"px";
+
+  const dx = (bossX+45)-(pigX+20);
+  const dy = (bossY+45)-(pigY+20);
+  if (Math.sqrt(dx*dx + dy*dy) < 58) {
+    hp--;
+    updateHP();
+    if (hp <= 0) location.reload();
+  }
+}
+
+/* === Магазин === */
+function buyHP(){
+  if (coins >= 5){
+    coins -= 5;
+    maxHP++;
+    hp = maxHP;
+    updateHP();
+    coinsUI.textContent = "💎 " + coins;
+  }
+}
+function buySpeed(){
+  if (coins >= 4){
+    coins -= 4;
+    speed += 0.5;
+    coinsUI.textContent = "💎 " + coins;
+  }
+}
+function buySword(dmg){
+  const cost = dmg === 2 ? 6 : dmg === 3 ? 10 : 16;
+  if (coins >= cost){
+    coins -= cost;
+    swordDamage = dmg;
+    coinsUI.textContent = "💎 " + coins;
+  }
+}
+
+function closeShop(){ shopOverlay.style.display = "none"; }
+function toggleShop(){
+  shopOverlay.style.display =
+    shopOverlay.style.display === "flex" ? "none" : "flex";
+}
+shopBtn.onclick = toggleShop;
+
+/* === Ультимейт (огненный круг) === */
+function castUltimate() {
+  if (!ultimateReady) return;
+
+  ultimateReady = false;
+  ultimateBtn.classList.add("cooldown");
+
+  const fire = document.createElement("div");
+  fire.style.position = "absolute";
+  fire.style.left = (pigX - 100) + "px";
+  fire.style.top = (pigY - 100) + "px";
+  fire.style.width = "200px";
+  fire.style.height = "200px";
+  fire.style.border = "6px solid orange";
+  fire.style.borderRadius = "50%";
+  fire.style.boxShadow = "0 0 25px 10px rgba(255,100,0,0.7)";
+  fire.style.animation = "fireCircle 0.8s ease-out";
+  fire.style.pointerEvents = "none";
+  fire.style.zIndex = "999";
+  game.appendChild(fire);
+
+  setTimeout(() => fire.remove(), 800);
+
+  slimes.forEach(slime => {
+    slime.hp -= ultimateDamage;
+    if (slime.hp <= 0) {
+      coins++;
+      coinsUI.textContent = "💎 " + coins;
+      addXP(1);
+      slime.el.remove();
+    }
+  });
+
+  if (bossActive) {
+    bossHP -= ultimateDamage;
+    if (bossHP <= 0) {
+      bossActive = false;
+      boss.style.display = "none";
+      addXP(5);
+      alert("🔥 Ты уничтожил босса ультой!");
+    }
+  }
+
+  setTimeout(() => {
+    ultimateReady = true;
+    ultimateBtn.classList.remove("cooldown");
+  }, ultimateCooldown);
+}
+
+ultimateBtn.onclick = castUltimate;
+
+/* === Управление === */
+up.onclick = ()=>move(0,-speed);
+down.onclick = ()=>move(0,speed);
+left.onclick = ()=>move(-speed,0);
+right.onclick = ()=>move(speed,0);
+attackBtn.onclick = spinAttack;
+
+document.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+
+  if (k === "arrowup") move(0,-speed);
+  else if (k === "arrowdown") move(0,speed);
+  else if (k === "arrowleft") move(-speed,0);
+  else if (k === "arrowright") move(speed,0);
+  else if (k === " ") spinAttack();
+  else if (k === "u") castUltimate();
+  else if (k === "s") toggleShop();
+  else if (k === "k") skinBtn.click();
+});
+
+/* === Музыка === */
+let audioCtx = null;
+let musicOsc = null;
+let musicGain = null;
+let musicPlaying = false;
+let musicInterval = null;
+
+function startMusic() {
+  if (!window.AudioContext && !window.webkitAudioContext) return;
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  musicOsc = audioCtx.createOscillator();
+  musicGain = audioCtx.createGain();
+
+  musicOsc.type = "triangle";
+  musicGain.gain.value = 0.06;
+
+  function loopPattern() {
+    let t = audioCtx.currentTime;
+    musicOsc.frequency.setValueAtTime(440, t);
+    musicOsc.frequency.setValueAtTime(523, t + 0.18);
+    musicOsc.frequency.setValueAtTime(392, t + 0.36);
+    musicOsc.frequency.setValueAtTime(587, t + 0.54);
+  }
+
+  loopPattern();
+  musicInterval = setInterval(loopPattern, 720);
+
+  musicOsc.connect(musicGain);
+  musicGain.connect(audioCtx.destination);
+  musicOsc.start();
+}
+
+function stopMusic() {
+  if (musicOsc) {
+    musicOsc.stop();
+    musicOsc.disconnect();
+    musicOsc = null;
+  }
+  if (musicInterval) {
+    clearInterval(musicInterval);
+    musicInterval = null;
+  }
+}
+
+musicBtn.onclick = () => {
+  if (!musicPlaying) {
+    startMusic();
+    musicPlaying = true;
+    musicBtn.textContent = "🔇 Музыка";
+  } else {
+    stopMusic();
+    musicPlaying = false;
+    musicBtn.textContent = "🔊 Музыка";
+  }
+};
+
+/* === Игровой цикл === */
+function loop(){
+  moveSlimes();
+  moveBoss();
+  checkFood();
+  requestAnimationFrame(loop);
+}
+
+updatePig();
+setInterval(spawnSlime, slimeSpawnRate);
+setInterval(spawnFood, foodSpawnRate);
+setInterval(()=>{ if(!bossActive && coins>=10) spawnBoss(); },1000);
+
+loop();
+</script>
+</body>
+</html>
+
